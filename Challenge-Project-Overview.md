@@ -48,25 +48,31 @@ The CUAD-based contract triage pipeline is a high-value industrial use case with
 ---
 
 ## 🏢 About Accenture
-Accenture is a leading global professional services company that provides a broad range of services and solutions in strategy, consulting, technology, and operations. The team objective for this project is to modernize legal operations by leveraging artificial intelligence to increase the efficiency and accuracy of contract review processes.
+Accenture is a leading global professional services company that provides a broad range of services and solutions in strategy, consulting, technology, and operations. 
 
 ---
 
 ## 🎯 The Challenge
 ### Project Summary
-This project involves building a pipeline to automatically detect key clauses in commercial contracts and flag them by risk level (Low, Medium, High) to generate a consolidated triage score. By utilizing the CUAD dataset and applying NLP strategies like multi-label classification and explainable risk-scoring, the team will help legal and procurement departments prioritize high-risk documents. This effort directly addresses the manual labor bottleneck currently faced by teams reviewing thousands of contracts annually.
+In this project, you will use real-world commercial contracts from the CUAD dataset (510 contracts, 41 expert-annotated clause categories) and NLP techniques including chunk-based multi-label classification with fine-tuned transformer encoders, paired with an explainable rule-based risk-scoring layer, to build a pipeline that automatically detects key clauses, flags them as Low/Medium/High risk, and rolls these up into a contract-level triage score. This will help our company address the bottleneck legal and procurement teams face when manually reviewing tens of thousands of contracts a year to find the small number of clauses that carry meaningful risk, enabling reviewers to prioritize which contracts to open first.
 
 ### Success Criteria
-For clause detection: per-category precision/recall/F1. For risk scoring: Spearman correlation and bucket agreement between the model's risk rankings and the advisor's hand-ranked clauses.
+Success has two tracks:
+- For clause detection: per-category precision/recall/F1 clearly beating the baseline (accuracy is misleading under CUAD's imbalance), with error analysis on where the model struggles.   
+- For risk scoring: since there are no ground-truth labels, success means strong Spearman correlation and bucket agreement between the model's risk rankings and the advisor's hand-ranked clauses, plus a sensitivity analysis showing the High/Medium boundary is stable.
+
+Overall, a successful December outcome is a working end-to-end pipeline producing risk-scored clause registers the advisor finds plausible and useful, a clean documented repo, and a final report covering results, limitations, and estimated reviewer time saved — an auditable triage tool the advisor would actually trust, not a black box.
+
+### Stretch Goals
+Stretch goals include span extraction, a trained risk model benchmarked against the rule-based baseline, LLM-generated clause explanations, broader category coverage, a Streamlit/Gradio demo, and an active-learning loop using advisor/model disagreements. These extend modeling or usability without affecting core deliverables.
 
 ### Project Milestones
 Use these milestones to guide your work. Your team will create a GitHub Projects board to track tasks within each milestone.
 | Month | Milestone | Key Activities |
 |-------|-----------|----------------|
-| **September** | Data Exploration & Preprocessing | Parsing raw CUAD PDFs, text normalization, and establishing token-level label alignment strategies for the target 41 categories. |
-| **October** | Feature Engineering & Baseline Modeling | Implementing chunk-based multi-label classification architectures and establishing baseline performance benchmarks using standard transformer encoders. |
-| **November** | Model Optimization & Evaluation | Conducting hyperparameter tuning, implementing the rule-based risk-scoring layer, and executing model validation against advisor-provided ground truth. |
-| **December** | Insights, Deliverables & Presentation | Finalizing the end-to-end pipeline, calculating reviewer time-saved metrics, and preparing the final technical presentation for stakeholders. |
+| **September** | [Title] | Clean and split the CUAD data, run EDA on class imbalance, build a chunking strategy, and establish a TF-IDF/keyword baseline with per-category metrics. |
+| **October** | [Title] | Fine-tune a transformer encoder for multi-label clause classification, address class imbalance, evaluate with per-category precision/recall/F1, and conduct error analysis. |
+| **November** | [Title] | Build and calibrate the four-signal risk-scoring layer, assemble the end-to-end pipeline, and validate risk rankings against advisor-labeled examples. |
 
 > **Note for the team:** Please create a GitHub Projects board in this repository to break these milestones into weekly tasks. Go to the **Projects** tab → **New project** → Choose **Board** → Add columns for each month.
 
@@ -76,7 +82,7 @@ Use these milestones to guide your work. Your team will create a GitHub Projects
 **Name and Source:** CUAD Dataset (Contract Understanding Atticus Dataset)  
 **Format:** JSON, Raw Text/PDF  
 **Size:** under 1gb  
-**Location:** [Link to be provided by Advisor during kickoff]  
+**Location:** https://github.com/TheAtticusProject/cuad  
 
 ### Key Details
 - Real-world commercial contracts from the CUAD dataset (510 contracts, 41 expert-annotated clause categories), raw text/PDF available.
@@ -92,35 +98,56 @@ Use these milestones to guide your work. Your team will create a GitHub Projects
 ---
 
 ## 📚 Resources to Get Started
+
 The following resources will help your team understand the problem space and potential technical approaches for this project:
+
 **Background Reading:**
-- The CUAD Paper: Atticus Project research on automated legal document review.
+- [e.g., Link to an article or blog post about the problem domain]
+- [e.g., Link to an industry report or case study]
+
 **Technical Tutorials:**
-- HuggingFace NLP Course: Fine-tuning models for token classification.
+- [e.g., Link to a free tutorial on the ML technique(s) involved]
+- [e.g., Link to documentation for a key library or tool]
+
 **Code Examples:**
-- CUAD GitHub repository and standard transformer boilerplate for text classification tasks.
+- [e.g., Link to a relevant GitHub repo]
+- [e.g., Link to a sample implementation or starter code]
+
+**Other:**
+- [Links to any additional resources — e.g., papers, videos, podcasts, etc.]
+
+*Feel free to explore beyond these, and share anything interesting you find with me!*
 
 ---
 
 ## 🤝 How We'll Work Together
-**Check-ins:** During our biweekly 60-min AI Studio Lab Section meeting block (2nd and 4th week of every month)  
-**Communication:** Email and scheduled Lab Section syncs  
-**Response time:** 48 business hours  
-**Recommended Tools:**
-- **Coding:** Google Colab Free Tier  
-- **Collaboration:** GitHub, Notion  
-- **Virtual Meetings:** Zoom, Google Meet  
+
+**Official check-ins:** During our biweekly 45-minute AI Studio Lab Section meeting block (2nd and 4th week of every month)
+
+ **Other ways to reach out to me with questions:** 
+* [e.g., Your team's channel within Break Through Tech’s Discord space]
+* [e.g., Email; please copy your teammates and AI Studio Coach]
+* [e.g., Request a team check-in on Zoom]
+* [Note: I will aim to respond within 48 hours. Please reach out to your AI Studio Coach with urgent questions.]
+
+> 💡 **Challenge Advisor: Please update the above based on your availability and preference. If you are not able to answer questions or meet with fellows outside of the biweekly Lab Section check-ins, simply write in "N/A (only available during the official check-in times)"**
+
+**Recommended free coding / collaboration tools**
+* […]
+* […]
 
 ---
 
 ## 🚀 Getting Started
-1. **Review this overview document** and note any questions for our first meeting.
-2. **Begin reviewing the dataset** using the link provided in the Dataset section.
-3. **Read the GitHub Projects documentation** [here](https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects).
 
-I'm excited to work with you!
+1. **Review this overview document** and note any questions for our first meeting
+2. **Begin reviewing the dataset** using the link above
+3. **Read the GitHub Projects documentation** [here](https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects)
+
+I’m excited to work with you!
 
 ---
 
 ## ❓ Questions?
-Please bring any questions to our first meeting during the week of August 24th (Break Through Tech's Bridge to Studio - Session B).
+
+Please bring any questions to our first meeting during the week of August 24th (Break Through Tech’s Bridge to Studio - Session C). 
