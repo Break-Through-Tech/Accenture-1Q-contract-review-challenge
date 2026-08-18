@@ -1,27 +1,7 @@
-## 📋 BTT Internal Evaluation Notes
-*(This section is for BTT staff and CAs only — remove before sharing with students)*
-
-### Technical Vetting
-| Check | Status | Notes |
-| :--- | :--- | :--- |
-| Python Compatibility | 🟢 | Project utilizes standard libraries (HuggingFace transformers, scikit-learn, pandas) compatible with free-tier Google Colab environments. |
-| Data Readiness | 🟡 | CUAD dataset is well-structured but requires significant effort to parse raw PDF text and align token-level labels for 41 categories, which may consume excessive time during early weeks. |
-| Resource Check | 🟢 | Project fits within memory constraints; however, fine-tuning large transformer models will require careful batch size management in Colab. |
-
-### Internal Scores
-- **Student Fit Score:** 7/10
-- **Technical Depth Score:** 8/10
-- **Overall Recommendation:** REVISE
-
-### Advisor Feedback Draft
-The CUAD-based contract triage pipeline is a high-value industrial use case with excellent potential for technical rigor. To ensure success within the timeframe of the program, I suggest: (i) pivoting from fine-tuning from scratch to utilizing pre-trained lightweight models (e.g., DistilRoBERTa) to reduce hardware overhead demand; and (ii) constraining the scope by focusing on the 10 most impactful clause categories, and having the full 41 as a stretch goal.
-
----
-
 # Contract Review Challenge
 
 **Company / Org:** Accenture  
-**Challenge Advisor:** Gopinath Kolluru, [Email address]  
+**Challenge Advisor:** Gopinath Kolluru, gopinath.kolluru@accenture.com  
 **AI Studio Coach:** Parth Dali, parth.dali@breakthroughtech.org  
 **Program:** Break Through Tech AI Studio - Fall 2026  
 
@@ -73,6 +53,7 @@ Use these milestones to guide your work. Your team will create a GitHub Projects
 ## 🛠️ Suggested Approach
 **ML Problem Type:** NLP & Classification  
 **Recommended Libraries:** HuggingFace Transformers, PyTorch/TensorFlow, Scikit-learn, Pandas  
+**Suggested Pipeline:** Contract Text → Preprocessing & Chunking → Multi-label Clause Classification → Evidence Extraction → Rule-based Risk Scoring → Contract-level Triage Score  
 **Evaluation Metrics:** Precision, Recall, F1-Score for classification; Spearman Correlation for risk-ranking alignment.
 
 ---
@@ -82,19 +63,20 @@ Use these milestones to guide your work. Your team will create a GitHub Projects
 The following resources will help your team understand the problem space and potential technical approaches for this project:
 
 **Background Reading:**
-- [e.g., Link to an article or blog post about the problem domain]
-- [e.g., Link to an industry report or case study]
+- [CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review](https://arxiv.org/abs/2103.06268)
+- [CUAD dataset overview from The Atticus Project](https://www.atticusprojectai.org/cuad/)
 
 **Technical Tutorials:**
-- [e.g., Link to a free tutorial on the ML technique(s) involved]
-- [e.g., Link to documentation for a key library or tool]
+- [Hugging Face text-classification guide](https://huggingface.co/docs/transformers/main/tasks/sequence_classification) — Fine-tuning transformer models.
+- [Hugging Face padding and truncation guide](https://huggingface.co/docs/transformers/main/pad_truncation)
+- [Hugging Face – Datasets](https://huggingface.co/docs/datasets/) — Loading and processing datasets.
 
 **Code Examples:**
-- [e.g., Link to a relevant GitHub repo]
-- [e.g., Link to a sample implementation or starter code]
+- [Official CUAD repository](https://github.com/TheAtticusProject/cuad)
+- [CUAD on Hugging Face](https://huggingface.co/datasets/theatticusproject/cuad) — Machine-learning-friendly access to CUAD.
 
 **Other:**
-- [Links to any additional resources — e.g., papers, videos, podcasts, etc.]
+- [scikit-learn precision, recall, and F-score documentation](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_fscore_support.html)
 
 *Feel free to explore beyond these, and share anything interesting you find with me!*
 
@@ -104,14 +86,11 @@ The following resources will help your team understand the problem space and pot
 
 **Official check-ins:** During our biweekly 45-minute AI Studio Lab Section meeting block (2nd and 4th week of every month)
 
- **Other ways to reach out to me with questions:** 
-* Email me copy your teammates and AI Studio Coach
+**Other ways to reach out to me with questions:**  
+
+**Communication:** Email (gopinath.kolluru@accenture.com); please copy your teammates and AI Studio Coach. 
+
 * [Note: I will aim to respond within 48 hours. Please reach out to your AI Studio Coach with urgent questions.]
-
-
-**Recommended free coding / collaboration tools**
-* […]
-* […]
 
 ---
 
