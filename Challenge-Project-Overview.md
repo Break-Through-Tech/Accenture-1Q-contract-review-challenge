@@ -53,7 +53,7 @@ Use these milestones to guide your work. Your team will create a GitHub Projects
 ## 🛠️ Suggested Approach
 **ML Problem Type:** NLP & Classification  
 **Recommended Libraries:** HuggingFace Transformers, PyTorch/TensorFlow, Scikit-learn, Pandas  
-**Suggested Pipeline:** Contract Text → Preprocessing & Chunking → Multi-label Clause Classification → Evidence Extraction → Rule-based Risk Scoring → Contract-level Triage Score  
+**Algorithm Examples:** TF-IDF/keyword baselines and a lightweight pre-trained transformer encoder such as DistilRoBERTa
 **Evaluation Metrics:** Precision, Recall, F1-Score for classification; Spearman Correlation for risk-ranking alignment.
 
 ---
