@@ -42,43 +42,67 @@ Use these milestones to guide your work. Your team will create a GitHub Projects
 **Name and Source:** CUAD Dataset (Contract Understanding Atticus Dataset)  
 **Format:** JSON, Raw Text/PDF  
 **Size:** under 1gb  
-**Location:** https://github.com/TheAtticusProject/cuad  
+**Location:** [Data folder](data/cuad)
 
 ### Key Details
-- Real-world commercial contracts from the CUAD dataset (510 contracts, 41 expert-annotated clause categories), raw text/PDF available.
-- Teams must implement strict preprocessing rules to handle document length variance and ensure text cleaning captures the necessary legal terminology for high-accuracy classification.
+- `CUADv1.json` contains 510 commercial contracts and 13,823 annotated answer spans across 41 contract-review categories.
+- Use the prepared JSON files: `train_separate_questions.json` contains 408 contracts and `test.json` contains 102 contracts. These are the **official** train/test splits released by The Atticus Project — split at the contract level (not by individual clause) to prevent data leakage, and directly comparable to the results in the original CUAD paper. Do not re-split the data yourselves.
+- Contract text is already available in each JSON document's `paragraphs[].context` field, with clause questions in `paragraphs[].qas[]` and labeled spans in `paragraphs[].qas[].answers[]`. **Do not parse raw PDFs for this project.**
+- `category_descriptions.csv` provides the name, description, answer format, and group for each of the 41 categories.
+- Contracts vary substantially in length, so teams should develop a chunking strategy, preserve important legal terminology during cleaning, and account for class imbalance.
+
+| Dataset / Source | Purpose in Project | Format | Access |
+|---|---|---|---|
+| **CUAD Category Descriptions** | Defines the 41 clause categories and provides guidance on what each category represents. Useful for building the label mapping and understanding the classification task. | CSV | [CUAD GitHub Repository](https://github.com/TheAtticusProject/cuad) |
+| **CUAD Dataset – Hugging Face** | Provides a machine-learning-friendly way to load CUAD directly into Python and Hugging Face workflows.| Hugging Face Dataset | [CUAD on Hugging Face](https://huggingface.co/datasets/theatticusproject/cuad-qa) |
+
+> ⚠️ **Note on Hugging Face naming:** use `theatticusproject/cuad-qa` specifically. The similarly named `theatticusproject/cuad` (no `-qa`) is a different, unstructured repository containing only documentation text — it is **not** usable contract data.
 
 ---
 
 ## 🛠️ Suggested Approach
 **ML Problem Type:** NLP & Classification  
 **Recommended Libraries:** HuggingFace Transformers, PyTorch/TensorFlow, Scikit-learn, Pandas  
-**Algorithm Examples:** TF-IDF/keyword baselines and a lightweight pre-trained transformer encoder such as DistilRoBERTa
-**Evaluation Metrics:** Precision, Recall, F1-Score for classification; Spearman Correlation for risk-ranking alignment.
+**Algorithm Examples:** TF-IDF/keyword baselines and a lightweight pre-trained transformer encoder such as DistilRoBERTa  
+**Suggested Pipeline:** Contract Text → Preprocessing & Chunking → Multi-label Clause Classification → Evidence Extraction → Rule-based Risk Scoring → Contract-level Triage Score  
+**Evaluation Metrics:** Precision, Recall, F1-Score for classification; Spearman Correlation for risk-ranking alignment.  
+**Development Environment:** Google Colab for model training and experiments; VS Code and Jupyter Notebooks for development and analysis.
 
 ---
 
 ## 📚 Resources to Get Started
 
-The following resources will help your team understand the problem space and potential technical approaches for this project:
+These resources will help your team understand the CUAD dataset, legal clause classification, transformer models, and the overall project approach.
 
 **Background Reading:**
-- [CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review](https://arxiv.org/abs/2103.06268)
-- [CUAD dataset overview from The Atticus Project](https://www.atticusprojectai.org/cuad/)
+- [CUAD – Contract Understanding Atticus Dataset](https://www.atticusprojectai.org/cuad/) — Dataset overview and legal contract review problem.
+- [CUAD Labeling Handbook](https://www.atticusprojectai.org/labeling-handbook/) — Definitions and examples of the 41 clause categories.
+- [CUAD Research Paper](https://arxiv.org/abs/2103.06268) — Technical background on the CUAD dataset.
 
 **Technical Tutorials:**
-- [Hugging Face text-classification guide](https://huggingface.co/docs/transformers/main/tasks/sequence_classification) — Fine-tuning transformer models.
-- [Hugging Face padding and truncation guide](https://huggingface.co/docs/transformers/main/pad_truncation)
+- [Hugging Face – Text Classification](https://huggingface.co/docs/transformers/main/en/tasks/sequence_classification) — Fine-tuning transformer models.
 - [Hugging Face – Datasets](https://huggingface.co/docs/datasets/) — Loading and processing datasets.
+- [Hugging Face padding and truncation guide](https://huggingface.co/docs/transformers/main/pad_truncation)
 
-**Code Examples:**
-- [Official CUAD repository](https://github.com/TheAtticusProject/cuad)
-- [CUAD on Hugging Face](https://huggingface.co/datasets/theatticusproject/cuad) — Machine-learning-friendly access to CUAD.
+**Code & Data:**
+- [Official CUAD GitHub Repository](https://github.com/TheAtticusProject/cuad) — Reference code and dataset resources.
+- [Guide to the provided data files](data/cuad/README.md)
 
 **Other:**
 - [scikit-learn precision, recall, and F-score documentation](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_fscore_support.html)
 
-*Feel free to explore beyond these, and share anything interesting you find with me!*
+**Recommended Tools:**
+- **Python:** pandas, NumPy, scikit-learn
+- **ML/NLP:** Hugging Face Transformers, Hugging Face Datasets, PyTorch
+- **Development:** Google Colab, VS Code, Jupyter Notebooks
+- **Data Analysis:** pandas, NumPy, scikit-learn
+- **Collaboration:** Git, GitHub Projects, Notion
+- **Documentation:** GitHub README and project documentation
+- **Virtual Meetings:** Zoom, Google Meet
+
+Feel free to explore beyond these, and share anything interesting you find with me!
+
+> **Tip:** Start with the CUAD dataset and Labeling Handbook before selecting a model. You are encouraged to explore additional tools, techniques, and resources as you develop the project and share useful findings with the team.
 
 ---
 
@@ -96,9 +120,13 @@ The following resources will help your team understand the problem space and pot
 
 ## 🚀 Getting Started
 
-1. **Review this overview document** and note any questions for our first meeting
-2. **Begin reviewing the dataset** using the link above
+Read this overview and list your open questions before our first team meeting.
+
+1. **Review this overview document** and note any questions for our first meeting: Understand the project goals, technical approach, dataset expectations, milestones.
+2. **Begin reviewing the JSON dataset** in the [data folder](data/cuad) Explore the 41 clause categories and identify the initial subset of contracts you will use for data exploration and baseline development.
 3. **Read the GitHub Projects documentation** [here](https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects)
+4. **Prepare Open Questions:** Record questions, assumptions, and areas where you need clarification before the first team meeting.
+5. **Document Your Decisions:** Keep important technical decisions and findings in GitHub Issues or project documentation so the entire team can follow the project's progress.
 
 I’m excited to work with you!
 
