@@ -111,6 +111,7 @@ Feel free to explore beyond these, and share anything interesting you find with 
 **Official check-ins:** During our biweekly 45-minute AI Studio Lab Section meeting block (2nd and 4th week of every month)
 
 **Other ways to reach out to me with questions:**  
+* [Discord Channel](https://discord.gg/7XC4pB5deF)
 
 **Communication:** Email (gopinath.kolluru@accenture.com); please copy your teammates and AI Studio Coach. 
 
