@@ -6,8 +6,6 @@
 
 ### 👥 **Team Members**
 
-**Example:**
-
 | Name             | GitHub Handle | Contribution                                                             |
 |------------------|---------------|--------------------------------------------------------------------------|
 | Aidan Jiang    | @ajiang05 | Data exploration, visualization, overall project coordination            |
