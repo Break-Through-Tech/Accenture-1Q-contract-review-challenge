@@ -6,17 +6,6 @@
 
 ### 👥 **Team Members**
 
-<<<<<<< HEAD
-| Name             | GitHub Handle | Contribution                                                             |
-|------------------|---------------|--------------------------------------------------------------------------|
-| Aidan Jiang    | @ajiang05 | Data exploration, visualization, overall project coordination            |
-| Bat-Orgil Erdenebat   | @BatOrgil7     | Data collection, exploratory data analysis (EDA), dataset documentation  |
-| Amina Hassan     | @aminahassan  | Data preprocessing, feature engineering, data validation                 |
-| Priya Mehta      | @pmehta       | Model selection, hyperparameter tuning, model training and optimization  |
-| Chris Park       | @chrispark    | Model evaluation, performance analysis, results interpretation           |
-=======
-**Example:**
-
 | Name                | GitHub Handle | Contribution                                                             |
 |------------------   |---------------|--------------------------------------------------------------------------|
 | Aidan Jiang         | @ajiang05     | Data exploration, visualization, overall project coordination            |
@@ -24,7 +13,6 @@
 | Timage Abubakar     | @noriacha     | Data preprocessing, feature engineering, data validation                 |
 | Vrielle Guevarra         | @vrigue       | Model selection, hyperparameter tuning, model training and optimization  |
 | Chris Park          | @chrispark    | Model evaluation, performance analysis, results interpretation           |
->>>>>>> 45aa8548462ed6c9de6290d807eef21680d6d540
 
 ---
 
