@@ -1,1 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
 
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Processed data — regenerate from data/cuad/ instead of committing
+data/processed/*.parquet
+data/processed/*.csv
+!data/processed/.gitkeep
+
+# Results DB — regenerate by rerunning the pipeline
+results/*.db
+results/*.db-journal
+!results/.gitkeep
+
+# Model checkpoints live in shared Drive / HF Hub, not git
+*.pt
+*.bin
+*.safetensors
+*.pkl
+*.joblib
+models/
+checkpoints/
+
+# Reports build output
+reports/figures/*.png
+reports/figures/*.pdf
+
+# Local env
+.env
