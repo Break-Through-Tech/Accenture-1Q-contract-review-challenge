@@ -1,3 +1,8 @@
+# Core analysis
 pandas
+numpy
+pyyaml
+
+# Notebooks
 jupyter
 ipykernel
