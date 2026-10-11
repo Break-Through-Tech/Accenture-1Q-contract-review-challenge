@@ -3,6 +3,10 @@ pandas
 numpy
 pyyaml
 
+# Plotting
+matplotlib
+seaborn
+
 # Notebooks
 jupyter
 ipykernel
