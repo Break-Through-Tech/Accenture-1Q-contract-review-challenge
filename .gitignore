@@ -28,12 +28,8 @@ results/*.db-journal
 *.safetensors
 *.pkl
 *.joblib
-models/
-checkpoints/
-
-# Reports build output
-reports/figures/*.png
-reports/figures/*.pdf
+/models/
+/checkpoints/
 
 # Local env
 .env
