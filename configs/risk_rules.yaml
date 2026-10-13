@@ -1,0 +1,92 @@
+# Risk scoring rules for the CUAD contract review pipeline.
+#
+# Every clause written to the results DB is stamped with the `version` below.
+# Bump it whenever weights, thresholds, or tiers change, so an old score stays
+# traceable to the rules that produced it. Never edit a released version in
+# place — add a new one.
+#
+# STATUS: scaffold. The four signals and the category tiers are open question
+# #2 in docs/ARCHITECTURE.md and need the advisor's input before this is used
+# to produce reportable numbers.
+
+version: 0.1.0-draft
+
+# --- Signals -----------------------------------------------------------------
+# Four signals combine into a 0-1 risk score per detected clause.
+# Weights must sum to 1.0. Names and definitions are PLACEHOLDERS.
+signals:
+  category_tier:
+    weight: 0.40
+    description: >
+      Inherent risk of the clause type itself, independent of wording.
+      Read from `category_tiers` below.
+
+  model_confidence:
+    weight: 0.20
+    description: >
+      Classifier probability for this category on the evidence chunk.
+      Low confidence should not by itself raise risk - it lowers trust in the
+      detection, so this signal is about how much to believe the other three.
+
+  clause_strength:
+    weight: 0.20
+    description: >
+      TODO: define. Intended to capture how onerous the wording is, e.g.
+      uncapped vs capped liability, perpetual vs fixed term.
+
+  counterparty_favorability:
+    weight: 0.20
+    description: >
+      TODO: define. Intended to capture which side the clause favors.
+
+# --- Score to level ----------------------------------------------------------
+# Applied to the weighted 0-1 score. The High/Medium boundary is the one the
+# success criteria require a sensitivity analysis on, so expect it to move.
+thresholds:
+  high: 0.70
+  medium: 0.40
+  # below `medium` is Low
+
+# --- Category tiers ----------------------------------------------------------
+# Inherent risk per clause category, feeding the `category_tier` signal.
+# Values: low | medium | high
+#
+# TODO: all 41 categories need a tier, confirmed with the advisor. The few
+# below are placeholders to show the shape, NOT agreed assignments.
+category_tiers:
+  default: medium
+  Uncapped Liability: high
+  Cap On Liability: high
+  Change Of Control: high
+  Governing Law: low
+  Document Name: low
+  Agreement Date: low
+
+# --- Triage aggregation ------------------------------------------------------
+# Rolling clause-level risk up to one contract-level score and review rank.
+triage:
+  # TODO: confirm. Weighted count is a starting point, not a decision.
+  method: weighted_count
+  level_points:
+    high: 5
+    medium: 2
+    low: 0
+  # Contracts with at least this many High clauses are always surfaced first,
+  # regardless of total score.
+  always_review_if_high_count: 1
+
+# --- Categories with known data caveats --------------------------------------
+# Carry these through every report that quotes risk numbers.
+caveats:
+  no_test_examples:
+    - Price Restrictions      # 0 positives in the 102 official test contracts
+  too_sparse_to_model_reliably:  # under 10% of train contracts
+    - Source Code Escrow
+    - Unlimited/All-You-Can-Eat-License
+    - Price Restrictions
+    - Affiliate License-Licensor
+    - Most Favored Nation
+    - Third Party Beneficiary
+    - No-Solicit Of Customers
+    - Non-Disparagement
+    - Joint Ip Ownership

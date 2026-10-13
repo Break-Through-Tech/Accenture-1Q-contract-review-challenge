@@ -246,10 +246,15 @@ erDiagram
 
 ---
 
-## 8. Suggested repo layout
+## 8. Repo layout
+
+**Status: implemented.** The directory tree below exists in the repo. Package
+directories under `src/` currently hold only `__init__.py` docstrings describing
+what belongs in each — the modules themselves are written as their milestones
+come up.
 
 ```
-cuad-contract-review/
+Accenture-1Q-contract-review-challenge/
 ├── data/
 │   ├── cuad/                 # raw store (read-only)
 │   └── processed/            # chunks.parquet (gitignored if large)
@@ -264,12 +269,22 @@ cuad-contract-review/
 │   └── eval/                 # metrics, Spearman, sensitivity
 ├── notebooks/                # EDA, error analysis
 ├── results/
-│   └── cuad_results.db       # results DB
+│   └── cuad_results.db       # results DB (gitignored)
 ├── app/                      # Streamlit / Gradio demo (stretch)
 ├── reports/                  # final report, figures
 └── docs/
     └── ARCHITECTURE.md       # this file
 ```
+
+What `.gitignore` keeps out: `data/processed/*.parquet`, `results/*.db`, model
+checkpoints (`*.pt`, `*.bin`, `*.safetensors`, `*.pkl`), `__pycache__/`, and
+`.ipynb_checkpoints/`. Everything ignored is regenerable from `data/cuad/` plus
+committed code and configs.
+
+`data/cuad/` is committed as-is (about 98 MB) so the team shares one fixed copy
+of the official split. `data/processed/contract_categories.jsonl` is committed
+too, at 9 MB; if processed artifacts grow, move them to shared Drive rather than
+letting the repo balloon.
 
 ---
 
