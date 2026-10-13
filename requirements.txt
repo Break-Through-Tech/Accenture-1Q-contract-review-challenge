@@ -2,10 +2,14 @@
 pandas
 numpy
 pyyaml
+pyarrow
 
 # Plotting
 matplotlib
 seaborn
+
+# NLP (tokenizer only for now; PyTorch comes with model training)
+transformers
 
 # Notebooks
 jupyter
