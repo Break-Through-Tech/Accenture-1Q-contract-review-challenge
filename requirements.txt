@@ -7,6 +7,9 @@ pyyaml
 matplotlib
 seaborn
 
+# NLP (tokenizer only for now; PyTorch comes with model training)
+transformers
+
 # Notebooks
 jupyter
 ipykernel
