@@ -37,16 +37,14 @@ flowchart TB
         CHUNK["Chunker"]
         MAP["Span-to-label mapper<br/>answer_start offsets to 41 labels"]
         CLEANL["Light cleaner<br/>for transformer"]
-        CLEANH["Heavier cleaner<br/>for TF-IDF"]
     end
 
     PROC[("Processed store<br/>chunks.parquet<br/>text + 41 label columns")]
 
     subgraph MODEL["Modeling"]
-        BASE["TF-IDF baseline<br/>1-2 grams + OvR logistic regression"]
         TRAIN["DistilRoBERTa fine-tuning<br/>Google Colab GPU"]
         INFER["Inference<br/>chunk to 41 probabilities"]
-        REG[("Model registry<br/>vectorizer, LR model,<br/>DistilRoBERTa checkpoints")]
+        REG[("Model registry<br/>DistilRoBERTa checkpoints")]
     end
 
     subgraph RISK["Risk engine"]
@@ -72,13 +70,10 @@ flowchart TB
     CUAD --> RAW
     RAW --> LOAD --> CHUNK --> MAP
     CAT --> MAP
-    MAP --> CLEANL & CLEANH
+    MAP --> CLEANL
     CLEANL --> PROC
-    CLEANH --> PROC
 
-    PROC --> BASE
     PROC --> TRAIN
-    BASE --> REG
     TRAIN --> REG
     REG --> INFER
     PROC --> INFER
@@ -129,7 +124,6 @@ erDiagram
         int start_char
         int end_char
         string text_light
-        string text_heavy
     }
     MODEL_RUN {
         string run_id PK
@@ -189,10 +183,9 @@ erDiagram
 | Component | Layer | Input | Output | Status |
 |---|---|---|---|---|
 | Loader | Preprocessing | Raw CUAD JSON | Contract text + answer spans | Frozen (official split, no PDF parsing) |
-| Chunker | Preprocessing | Contract text | Chunks with character offsets | Frozen (function frozen in Task 2) |
+| Chunker | Preprocessing | Contract text | Chunks with character offsets | Frozen (510 tokens, 128 overlap; decided in #22, built in #23) |
 | Span-to-label mapper | Preprocessing | Chunks + `answer_start` spans | 41 binary labels per chunk | Frozen (SQuAD 2.0 to multi-label) |
-| Light / heavier cleaners | Preprocessing | Labeled chunks | Two cleaned text columns | Frozen (applied after mapping) |
-| TF-IDF baseline | Modeling | Heavier-cleaned text | Vectorizer + LR model | Frozen (1-2 grams, OvR LR, macro-F1) |
+| Light cleaner | Preprocessing | Labeled chunks | Cleaned text column | Frozen (applied after mapping) |
 | DistilRoBERTa trainer | Modeling | Light-cleaned text | Fine-tuned checkpoint | Frozen model choice; imbalance strategy TBD |
 | Inference | Modeling | Chunks + checkpoint | 41 probabilities per chunk | Proposed |
 | Evidence extractor | Risk engine | Predictions | Supporting clause text per category | Proposed |
@@ -209,8 +202,8 @@ erDiagram
 | Store | Technology | Contents | Why this choice | Status |
 |---|---|---|---|---|
 | Raw store | Files in `data/cuad/` | Official CUAD JSON + category CSV | Never modified, so preprocessing is always rerunnable | Frozen |
-| Processed store | Parquet | One row per chunk: ids, offsets, both cleaned texts, 41 label columns | Columnar and compact for 41 label columns; loads straight into pandas and HF Datasets | Proposed |
-| Model registry | Shared Google Drive folder (or Hugging Face Hub) | Pickled vectorizer + LR, DistilRoBERTa checkpoints | Colab disks reset every session; checkpoints are too large for git | Proposed |
+| Processed store | Parquet | One row per chunk: ids, offsets, cleaned text, 41 label columns | Columnar and compact for 41 label columns; loads straight into pandas and HF Datasets | Proposed |
+| Model registry | Shared Google Drive folder (or Hugging Face Hub) | DistilRoBERTa checkpoints | Colab disks reset every session; checkpoints are too large for git | Proposed |
 | Risk rules config | YAML in git | Signal weights, thresholds, category risk tiers | Rules are reviewable in pull requests, and every change gets a version | Proposed |
 | Results DB | SQLite file | Clause register, triage scores, predictions, metrics, advisor labels | Single file, no server, queryable with SQL, easy to hand to the advisor | Proposed |
 
@@ -223,7 +216,7 @@ erDiagram
 | Environment | Used for |
 |---|---|
 | Google Colab (GPU) | DistilRoBERTa fine-tuning and batch inference |
-| VS Code / Jupyter (local) | Preprocessing, baseline, risk engine, EDA, error analysis |
+| VS Code / Jupyter (local) | Preprocessing, risk engine, EDA, error analysis |
 | GitHub | Code, configs, docs, GitHub Projects board |
 | Shared Google Drive | Model checkpoints and large processed files |
 
@@ -235,7 +228,9 @@ erDiagram
 
 - **Official train/test split, no re-splitting.** Keeps the split at the contract level to prevent leakage and keeps results comparable to the CUAD paper.
 - **Cleaning runs after span-to-label mapping.** Cleaning changes character positions, so it must come after `answer_start` offsets are used.
-- **Two cleaning functions.** The transformer needs text close to the original. TF-IDF benefits from more normalization.
+- **No TF-IDF baseline.** The advisor asked us to go straight to the transformer (October 2026). The comparison point is the naive "predict absent for everything" baseline from the EDA: 67.4% accuracy, 0% recall.
+- **One cleaning function.** Only the transformer reads the text, and it needs text close to the original. The heavier cleaner existed only for TF-IDF and has been dropped.
+- **Chunking: sliding token windows, 510 tokens with 128 overlap.** 510 is DistilRoBERTa's 512-token limit minus its 2 special tokens. Keeps 97.8% of annotated clauses whole on train. The strategy was chosen for the transformer's tokenizer, so dropping the baseline does not affect it.
 - **Macro-F1 as the headline metric.** CUAD is heavily imbalanced, so accuracy is misleading.
 - **Rule-based risk scoring.** No ground-truth risk labels exist, and explainability matters more than raw capability here.
 
@@ -262,8 +257,8 @@ Accenture-1Q-contract-review-challenge/
 │   └── risk_rules.yaml       # versioned risk rules
 ├── src/
 │   ├── ingest/               # loader, chunker, span-to-label mapper
-│   ├── clean/                # light + heavier cleaners
-│   ├── models/               # baseline + DistilRoBERTa train / infer
+│   ├── clean/                # light cleaner
+│   ├── models/               # DistilRoBERTa train / infer
 │   ├── risk/                 # evidence extractor, scorer, triage
 │   ├── db/                   # SQLite schema + read/write helpers
 │   └── eval/                 # metrics, Spearman, sensitivity
@@ -294,3 +289,4 @@ letting the repo balloon.
 2. What are the four risk signals, and which ones depend on model confidence versus fixed category tiers?
 3. What format will the advisor's hand-ranked clauses arrive in, and how do we match them to `clause_id`?
 4. How do we handle class imbalance in DistilRoBERTa training: weighted loss, resampling, or per-category thresholds?
+5. Train now keeps 32 categories (the 9 under 10% were removed) while test keeps all 41. Does evaluation cover the 32 the model can predict, or all 41?
