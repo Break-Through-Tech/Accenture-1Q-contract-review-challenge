@@ -4,12 +4,13 @@ model:
   name: distilroberta-base
   max_length: 512 # includes the two special tokens; chunk text is capped at 510 tokens
   dropout: 0.1
+  expected_num_labels: 34 # derived from categories with positive labels in train
   decision_threshold: 0.5 # tune with validation data before final test evaluation
 
 data:
   chunks_path: data/processed/chunks.parquet
   labels_path: data/processed/chunk_labels.parquet
-  text_column: text
+  text_column: text_light
   split_column: split
   contract_id_column: contract_id
   chunk_id_column: chunk_id
