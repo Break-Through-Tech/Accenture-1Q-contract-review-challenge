@@ -1,0 +1,39 @@
+# Initial DistilRoBERTa configuration for chunk-level CUAD classification.
+# The training implementation should record the resolved category list with each run.
+model:
+  name: distilroberta-base
+  max_length: 512 # includes the two special tokens; chunk text is capped at 510 tokens
+  dropout: 0.1
+  decision_threshold: 0.5 # tune with validation data before final test evaluation
+
+data:
+  chunks_path: data/processed/chunks.parquet
+  labels_path: data/processed/chunk_labels.parquet
+  text_column: text
+  split_column: split
+  contract_id_column: contract_id
+  chunk_id_column: chunk_id
+  # The label artifact keeps the full category set, but categories removed from
+  # training are nullable. Use only categories with positive training examples
+  # as model outputs; retain the resolved list in the run metadata.
+  category_policy: train_positive
+
+training:
+  seed: 42
+  learning_rate: 0.00002
+  batch_size: 8
+  epochs: 3
+  weight_decay: 0.01
+  imbalance_strategy: none # decide and document before the final training run
+
+evaluation:
+  headline_metric: macro_f1
+  report_metrics:
+    - precision
+    - recall
+    - f1
+    - support
+  test_split: test
+
+artifacts:
+  output_dir: models/distilroberta-cuad

@@ -8,25 +8,27 @@ For example, the word “party” can mean different things in different passage
 
 Transformers are commonly pretrained on large collections of text. Pretraining gives the model general language patterns before it is adapted to a particular task. **Fine-tuning** continues training that pretrained model on labeled examples for the project task.
 
-## Planned model in this project
+## Model structure in this project
 
-The architecture proposes fine-tuning **DistilRoBERTa** to detect clause categories in contract chunks. DistilRoBERTa is a smaller version of RoBERTa, designed to retain useful language representations while being lighter than the full model.
+The architecture uses **DistilRoBERTa** to detect clause categories in contract chunks. DistilRoBERTa is a smaller version of RoBERTa, designed to retain useful language representations while being lighter than the full model.
 
-The input to the classifier is a contract chunk. A tokenizer converts its text into model-specific token IDs. The model processes those tokens and produces one score for each category. Since one chunk can contain clauses from multiple categories, the output is multi-label: each category is predicted independently as present or absent using a selected threshold.
+The input to the classifier is a contract chunk. A tokenizer converts its text into model-specific token IDs. The current chunking strategy creates windows of up to 510 text tokens with 128 tokens of overlap; DistilRoBERTa adds two special tokens, keeping the encoded input within its 512-token limit. The model processes those tokens and produces one score for each category. Since one chunk can contain clauses from multiple categories, the output is multi-label: each category is predicted independently as present or absent using a selected threshold.
 
-The training targets come from the span-to-label mapper: annotated CUAD answer spans are aligned to chunks, then converted into category labels. The transformer learns from many chunk-and-label examples to produce category scores for new chunks.
+The training targets come from the span-to-label mapper: annotated CUAD answer spans are aligned to chunks, then converted into category labels. The transformer learns from many chunk-and-label examples to produce category scores for new chunks. The initial implementation is in [`src/models/transformer.py`](../src/models/transformer.py), with starting settings in [`configs/transformer.yaml`](../configs/transformer.yaml).
+
+The model uses the final hidden representation for the first (classification) token, followed by dropout and a linear layer with one output per selected category. It trains with binary cross-entropy-with-logits, which supports multiple independent labels. The label artifact can contain missing values for categories excluded from training or annotations that cannot be trusted; a label mask excludes those values from the loss instead of treating them as negative examples.
 
 ## Why use a transformer?
 
-The main purpose is to test whether contextual language understanding improves clause detection beyond the TF-IDF baseline. TF-IDF relies on word and phrase patterns; a transformer can use surrounding words and may recognize related wording even when it does not exactly match a phrase seen during training.
+The main purpose is contextual clause detection using the pretrained DistilRoBERTa model. The current architecture decision is to proceed with the transformer and use the naive predict-absent baseline from EDA as the comparison point; the earlier TF-IDF model comparison is no longer part of the plan.
 
-The transformer provides the more capable modeling approach in the planned comparison. TF-IDF provides a faster, simpler baseline. Evaluating both helps show whether the added compute and complexity provide a measurable benefit for this task.
+The transformer produces a score for each chunk/category pair. Later pipeline stages can combine predictions from overlapping chunks, retain supporting text, and pass detected clauses to the separate risk-scoring layer.
 
 ## How it fits into the workflow
 
 1. Chunk contracts and preserve their original character offsets.
 2. Map answer spans to chunk-level category labels.
-3. Apply the light cleaning intended for the transformer. Preserve the original text and offsets for audit and evidence use.
+3. Apply the light cleaning intended for the transformer after span alignment. Keep the original chunk text and offsets for audit and evidence use.
 4. Tokenize chunks using the tokenizer paired with DistilRoBERTa.
 5. Fine-tune the pretrained model on labeled training chunks.
 6. Use a validation set to make training decisions and choose prediction thresholds; evaluate final performance on held-out test contracts.
@@ -44,14 +46,14 @@ The architecture plans to use Google Colab with a GPU for fine-tuning. GPUs make
 
 Because category frequencies are imbalanced, accuracy alone can hide poor performance on less common categories. Report per-category precision, recall, and F1, along with macro-F1, which gives each evaluated category equal weight. Choose thresholds using training/validation data rather than tuning them against the held-out test set.
 
-The current preparation notebook applies a 10% positive-rate cutoff to training categories. The model's output category list and evaluation scope must reflect that choice. Categories removed from training have no positive examples for the model to learn from; the team should decide whether to exclude them from the intended model scope or change the cutoff before final evaluation.
+The chunk-label artifact retains nullable columns for categories that have been excluded from training. The initial model configuration selects categories with at least one observed positive training label (currently 34 of the 41 categories, per the merged chunk-label work) and masks missing targets in the loss. Test metrics must use that same resolved category list. If the intended deliverable is all 41 categories, the cutoff and class-support plan need to change before training; an output head for categories with no positive train labels would not learn to detect them.
 
 ## Limitations and trade-offs
 
-- Fine-tuning requires more compute and setup than the TF-IDF baseline.
+- Fine-tuning requires more compute and setup than a simple keyword or always-absent baseline.
 - A transformer can still miss clauses, especially when the training examples are limited, labels are noisy, or the relevant language differs from the training data.
-- Its predictions are less directly inspectable than TF-IDF word weights, so the system should retain the clause text and model outputs used downstream.
-- Chunk boundaries and span-to-label rules affect the examples used for training, just as they do for TF-IDF.
+- Its predictions are less directly inspectable than a linear model's word weights, so the system should retain the clause text and model outputs used downstream.
+- Chunk boundaries and span-to-label rules determine the examples used for training and can affect model performance.
 - A higher model score does not by itself establish that the resulting risk decision is correct; risk scoring and review remain separate downstream steps in the architecture.
 
 The transformer is a proposed classifier component, not a complete contract-review system. It predicts clause categories; evidence handling, risk rules, and contract-level triage are separate pipeline components.
