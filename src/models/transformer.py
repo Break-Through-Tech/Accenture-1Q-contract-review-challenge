@@ -107,6 +107,7 @@ class MultiLabelTransformer(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         labels: Optional[torch.Tensor] = None,
         label_mask: Optional[torch.Tensor] = None,
+        pos_weight: Optional[torch.Tensor] = None,
     ) -> Dict[str, torch.Tensor]:
         """Return raw category logits and, when targets are given, masked BCE loss."""
         encoder_output = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
@@ -124,7 +125,7 @@ class MultiLabelTransformer(nn.Module):
                 label_mask = label_mask.to(dtype=torch.bool)
             safe_labels = torch.nan_to_num(labels, nan=0.0)
             element_loss = F.binary_cross_entropy_with_logits(
-                logits, safe_labels, reduction="none"
+                logits, safe_labels, reduction="none", pos_weight=pos_weight
             )
             weights = label_mask.to(dtype=element_loss.dtype)
             loss = (element_loss * weights).sum() / weights.sum().clamp_min(1.0)

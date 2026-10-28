@@ -8,7 +8,8 @@ pyarrow
 matplotlib
 seaborn
 
-# NLP (tokenizer only for now; PyTorch comes with model training)
+# Transformer model training and tokenization
+torch
 transformers
 
 # Notebooks

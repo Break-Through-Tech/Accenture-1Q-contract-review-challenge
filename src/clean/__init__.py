@@ -1,6 +1,5 @@
-"""Light and heavier text cleaners.
+"""Light, offset-preserving cleaning for transformer input text."""
 
-Both run *after* span-to-label mapping, because cleaning shifts character
-positions that ``answer_start`` offsets depend on. The light cleaner feeds the
-transformer; the heavier one feeds TF-IDF.
-"""
+from .light import add_light_cleaned_text, clean_transformer_text
+
+__all__ = ["add_light_cleaned_text", "clean_transformer_text"]

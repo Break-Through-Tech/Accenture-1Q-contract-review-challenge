@@ -8,7 +8,7 @@
 
 ## 1. Context and goals
 
-Legal and procurement teams review tens of thousands of contracts a year, but only a small number of clauses in each carry real risk. This system reads a contract, detects which of the 41 CUAD clause categories appear in it, assigns each detected clause a Low / Medium / High risk level using explainable rules, and rolls those up into a contract-level triage score so reviewers know which contracts to open first.
+Legal and procurement teams review tens of thousands of contracts a year, but only a small number of clauses in each carry real risk. This system reads a contract, detects selected CUAD clause categories, assigns each detected clause a Low / Medium / High risk level using explainable rules, and rolls those up into a contract-level triage score so reviewers know which contracts to open first. The current transformer scope is 34 of CUAD's 41 categories: categories without positive training labels are excluded from model outputs.
 
 Design priorities, in order:
 
@@ -35,15 +35,15 @@ flowchart TB
     subgraph PREP["Ingestion and preprocessing"]
         LOAD["Loader<br/>parse paragraphs, qas, answers"]
         CHUNK["Chunker"]
-        MAP["Span-to-label mapper<br/>answer_start offsets to 41 labels"]
+        MAP["Span-to-label mapper<br/>answer_start offsets to 41 nullable labels"]
         CLEANL["Light cleaner<br/>for transformer"]
     end
 
-    PROC[("Processed store<br/>chunks.parquet<br/>text + 41 label columns")]
+    PROC[("Processed store<br/>chunks.parquet + chunk_labels.parquet<br/>text + 41 source label columns")]
 
     subgraph MODEL["Modeling"]
         TRAIN["DistilRoBERTa fine-tuning<br/>Google Colab GPU"]
-        INFER["Inference<br/>chunk to 41 probabilities"]
+        INFER["Inference<br/>chunk to 34 probabilities"]
         REG[("Model registry<br/>DistilRoBERTa checkpoints")]
     end
 
@@ -184,10 +184,10 @@ erDiagram
 |---|---|---|---|---|
 | Loader | Preprocessing | Raw CUAD JSON | Contract text + answer spans | Frozen (official split, no PDF parsing) |
 | Chunker | Preprocessing | Contract text | Chunks with character offsets | Frozen (510 tokens, 128 overlap; decided in #22, built in #23) |
-| Span-to-label mapper | Preprocessing | Chunks + `answer_start` spans | 41 binary labels per chunk | Frozen (SQuAD 2.0 to multi-label) |
+| Span-to-label mapper | Preprocessing | Chunks + `answer_start` spans | 41 nullable labels per chunk | Frozen; 7 train-excluded categories remain missing in train labels |
 | Light cleaner | Preprocessing | Labeled chunks | Cleaned text column | Frozen (applied after mapping) |
-| DistilRoBERTa trainer | Modeling | Light-cleaned text | Fine-tuned checkpoint | Frozen model choice; imbalance strategy TBD |
-| Inference | Modeling | Chunks + checkpoint | 41 probabilities per chunk | Proposed |
+| DistilRoBERTa trainer | Modeling | Light-cleaned text + 34 train-supported labels | Fine-tuned checkpoint | Frozen model choice and category scope; imbalance strategy TBD |
+| Inference | Modeling | Chunks + checkpoint | 34 probabilities per chunk | Proposed |
 | Evidence extractor | Risk engine | Predictions | Supporting clause text per category | Proposed |
 | Rule-based scorer | Risk engine | Evidence + `risk_rules.yaml` | Risk level per clause | Proposed (four signals TBD) |
 | Triage aggregator | Risk engine | Clause risk levels | Contract triage score + rank | Proposed |
@@ -202,7 +202,7 @@ erDiagram
 | Store | Technology | Contents | Why this choice | Status |
 |---|---|---|---|---|
 | Raw store | Files in `data/cuad/` | Official CUAD JSON + category CSV | Never modified, so preprocessing is always rerunnable | Frozen |
-| Processed store | Parquet | One row per chunk: ids, offsets, cleaned text, 41 label columns | Columnar and compact for 41 label columns; loads straight into pandas and HF Datasets | Proposed |
+| Processed store | Parquet | One row per chunk: ids, offsets, original/light-cleaned text, 41 nullable source label columns | Keeps source annotations intact; the model selects 34 categories with positive training examples | Proposed |
 | Model registry | Shared Google Drive folder (or Hugging Face Hub) | DistilRoBERTa checkpoints | Colab disks reset every session; checkpoints are too large for git | Proposed |
 | Risk rules config | YAML in git | Signal weights, thresholds, category risk tiers | Rules are reviewable in pull requests, and every change gets a version | Proposed |
 | Results DB | SQLite file | Clause register, triage scores, predictions, metrics, advisor labels | Single file, no server, queryable with SQL, easy to hand to the advisor | Proposed |
@@ -227,8 +227,9 @@ erDiagram
 **Frozen**
 
 - **Official train/test split, no re-splitting.** Keeps the split at the contract level to prevent leakage and keeps results comparable to the CUAD paper.
-- **Cleaning runs after span-to-label mapping.** Cleaning changes character positions, so it must come after `answer_start` offsets are used.
+- **Cleaning runs after span-to-label mapping.** The light cleaner preserves character length by blanking known artifacts with spaces, so source offsets remain aligned; applying it after mapping also keeps annotation logic anchored to the original CUAD text.
 - **No TF-IDF baseline.** The advisor asked us to go straight to the transformer (October 2026). The comparison point is the naive "predict absent for everything" baseline from the EDA: 67.4% accuracy, 0% recall.
+- **34-category transformer scope.** Keep all 41 categories in the span-label artifact, but train and evaluate model outputs only for the 34 categories with positive training labels. The other 7 stay nullable in the training labels and are outside the classifier's output scope.
 - **One cleaning function.** Only the transformer reads the text, and it needs text close to the original. The heavier cleaner existed only for TF-IDF and has been dropped.
 - **Chunking: sliding token windows, 510 tokens with 128 overlap.** 510 is DistilRoBERTa's 512-token limit minus its 2 special tokens. Keeps 97.8% of annotated clauses whole on train. The strategy was chosen for the transformer's tokenizer, so dropping the baseline does not affect it.
 - **Macro-F1 as the headline metric.** CUAD is heavily imbalanced, so accuracy is misleading.
@@ -289,4 +290,4 @@ letting the repo balloon.
 2. What are the four risk signals, and which ones depend on model confidence versus fixed category tiers?
 3. What format will the advisor's hand-ranked clauses arrive in, and how do we match them to `clause_id`?
 4. How do we handle class imbalance in DistilRoBERTa training: weighted loss, resampling, or per-category thresholds?
-5. Train now keeps 32 categories (the 9 under 10% were removed) while test keeps all 41. Does evaluation cover the 32 the model can predict, or all 41?
+5. How should reports describe the seven CUAD categories outside the 34-category model scope?
