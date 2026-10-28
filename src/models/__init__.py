@@ -1,1 +1,1 @@
-"""TF-IDF baseline and DistilRoBERTa training / inference."""
+"""DistilRoBERTa multi-label training and inference for CUAD chunks."""
