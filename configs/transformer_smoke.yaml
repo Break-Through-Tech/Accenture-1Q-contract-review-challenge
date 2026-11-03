@@ -1,0 +1,33 @@
+# Smoke-test config: proves the pipeline runs end to end on CPU in a few minutes.
+# Not a real run - 3 train contracts, 1 epoch. Delete once the Colab run works.
+model:
+  name: distilroberta-base
+  max_length: 512
+  dropout: 0.1
+  expected_num_labels: 34
+  decision_threshold: 0.5
+
+data:
+  chunks_path: data/processed/smoke_chunks.parquet
+  labels_path: data/processed/smoke_chunk_labels.parquet
+  text_column: text_light
+  split_column: split
+  contract_id_column: contract_id
+  chunk_id_column: chunk_id
+  category_policy: train_positive
+
+training:
+  seed: 42
+  learning_rate: 0.00002
+  batch_size: 4
+  epochs: 1
+  weight_decay: 0.01
+  imbalance_strategy: none
+
+evaluation:
+  headline_metric: macro_f1
+  report_metrics: [precision, recall, f1, support]
+  test_split: test
+
+artifacts:
+  output_dir: models/smoke
