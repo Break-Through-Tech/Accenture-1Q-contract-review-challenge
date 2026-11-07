@@ -20,6 +20,10 @@ CLAUSE_REGISTER_COLUMNS = [
     "risk_level",
     "rules_version",
     "run_id",
+    # Not in the ARCHITECTURE.md schema yet; #46 needs evidence offsets on
+    # every clause row so a reviewer can find the source text.
+    "start_char",
+    "end_char",
 ]
 
 
@@ -78,12 +82,13 @@ def score_clauses(predictions: pd.DataFrame, rules: Dict, run_id: str) -> pd.Dat
     """Turn positive predictions into a clause register.
 
     ``predictions`` needs ``contract_id``, ``category``, ``probability`` and
-    ``predicted_label``, as in the trainer's prediction tables. ``chunk_id`` and
-    ``evidence_text`` are optional; without evidence text the keyword signal
-    scores 0. Only rows with ``predicted_label`` set are scored.
+    ``predicted_label``, as in the trainer's prediction tables, or the output
+    of ``evidence.extract_evidence``. ``chunk_id``, ``evidence_text``,
+    ``start_char`` and ``end_char`` are optional; without evidence text the
+    keyword signal scores 0. Only rows with ``predicted_label`` set are scored.
     """
     detected = predictions[predictions["predicted_label"].astype(bool)].copy()
-    for column in ("chunk_id", "evidence_text"):
+    for column in ("chunk_id", "evidence_text", "start_char", "end_char"):
         if column not in detected:
             detected[column] = None
     if detected.empty:
@@ -115,6 +120,8 @@ def score_clauses(predictions: pd.DataFrame, rules: Dict, run_id: str) -> pd.Dat
             "risk_level": risk_level(score, rules),
             "rules_version": rules["version"],
             "run_id": run_id,
+            "start_char": row.start_char,
+            "end_char": row.end_char,
         })
     return pd.DataFrame(rows, columns=CLAUSE_REGISTER_COLUMNS)
 
