@@ -12,6 +12,9 @@ seaborn
 torch
 transformers
 
+# Testing
+pytest
+
 # Notebooks
 jupyter
 ipykernel

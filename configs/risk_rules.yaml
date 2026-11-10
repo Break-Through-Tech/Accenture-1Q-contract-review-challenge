@@ -5,88 +5,209 @@
 # traceable to the rules that produced it. Never edit a released version in
 # place — add a new one.
 #
-# STATUS: scaffold. The four signals and the category tiers are open question
-# #2 in docs/ARCHITECTURE.md and need the advisor's input before this is used
-# to produce reportable numbers.
+# STATUS: draft. Signals follow issue #9. Tiers are a first pass and assume
+# the perspective of the party taking on the obligation; confirm with the
+# advisor (via #47) before quoting reportable numbers.
 
-version: 0.1.0-draft
+version: 0.4.0-draft
 
 # --- Signals -----------------------------------------------------------------
-# Four signals combine into a 0-1 risk score per detected clause.
-# Weights must sum to 1.0. Names and definitions are PLACEHOLDERS.
+# Four signals, each scored 0-1, combine into a 0-1 risk score per detected
+# clause. Weights must sum to 1.0.
 signals:
   category_tier:
     weight: 0.40
     description: >
       Inherent risk of the clause type itself, independent of wording.
-      Read from `category_tiers` below.
+      Read from `category_tiers` below and mapped through `tier_values`.
 
   model_confidence:
     weight: 0.20
     description: >
       Classifier probability for this category on the evidence chunk.
       Low confidence should not by itself raise risk - it lowers trust in the
-      detection, so this signal is about how much to believe the other three.
+      detection, so a shaky detection scores lower than a confident one.
 
-  clause_strength:
+  restrictive_keywords:
     weight: 0.20
     description: >
-      TODO: define. Intended to capture how onerous the wording is, e.g.
-      uncapped vs capped liability, perpetual vs fixed term.
+      1.0 if the evidence text contains any phrase from `keywords.global` or
+      the category's own list in `keywords.by_category`, else 0.0. Always 0.0
+      for categories in `keywords.skip_categories`.
 
-  counterparty_favorability:
+  missing_exception:
     weight: 0.20
     description: >
-      TODO: define. Intended to capture which side the clause favors.
+      1.0 if the category has a protective counterpart in
+      `protective_exceptions` and that counterpart was not detected anywhere
+      in the contract, else 0.0. Categories with no counterpart score 0.0.
+
+tier_values:
+  low: 0.0
+  medium: 0.5
+  high: 1.0
 
 # --- Score to level ----------------------------------------------------------
 # Applied to the weighted 0-1 score. The High/Medium boundary is the one the
 # success criteria require a sensitivity analysis on, so expect it to move.
+#
+# With the weights above and full confidence:
+#   high tier, no red flags           0.40 + 0.20               = 0.60 -> Medium
+#   high tier + keyword or exception  0.40 + 0.20 + 0.20        = 0.80 -> High
+#   high tier, confidence 0.5         0.40 + 0.10               = 0.50 -> Medium
+#   medium tier + keyword             0.20 + 0.20 + 0.20        = 0.60 -> Medium
+#   medium tier + both red flags      0.20 + 0.20 + 0.20 + 0.20 = 0.80 -> High
+#   low tier, no red flags            0.00 + 0.20               = 0.20 -> Low
+#   low tier + keyword                0.00 + 0.20 + 0.20        = 0.40 -> Medium
+# So a clause type alone never makes a clause High; it also needs a red flag.
+# 0.60 sent 71 of 102 test contracts to the top on CUAD gold labels; 0.70
+# together with the 2-High triage rule below sends 20.
 thresholds:
   high: 0.70
-  medium: 0.40
+  medium: 0.35
   # below `medium` is Low
 
 # --- Category tiers ----------------------------------------------------------
 # Inherent risk per clause category, feeding the `category_tier` signal.
 # Values: low | medium | high
-#
-# TODO: all 41 categories need a tier, confirmed with the advisor. The few
-# below are placeholders to show the shape, NOT agreed assignments.
+# Covers the 34 categories the classifier predicts. `default` applies to
+# anything else, including the 7 categories outside the model's scope.
 category_tiers:
   default: medium
+
+  # High: serious money at stake, or blocks the business
   Uncapped Liability: high
-  Cap On Liability: high
+  Non-Compete: high
+  Exclusivity: high
+  Ip Ownership Assignment: high
+  Liquidated Damages: high
   Change Of Control: high
-  Governing Law: low
+  Minimum Commitment: high          # flips with perspective; confirm
+
+  # Medium: real constraints or obligations, manageable
+  Termination For Convenience: medium
+  Renewal Term: medium
+  Notice Period To Terminate Renewal: medium
+  Post-Termination Services: medium
+  No-Solicit Of Customers: medium
+  No-Solicit Of Employees: medium
+  Rofr/Rofo/Rofn: medium
+  Covenant Not To Sue: medium       # flips with perspective; confirm
+  Joint Ip Ownership: medium
+  Irrevocable Or Perpetual License: medium  # high for the licensor; confirm
+  Revenue/Profit Sharing: medium
+  Volume Restriction: medium
+
+  # Low: routine, or protective
+  Cap On Liability: low
+  Insurance: low
+  Warranty Duration: low
+  Competitive Restriction Exception: low
+  License Grant: low
+  Non-Transferable License: low
+  Affiliate License-Licensee: low
+  Audit Rights: low
+  Anti-Assignment: low              # in 74% of train contracts; boilerplate
+
+  # Contract metadata, no inherent risk
   Document Name: low
+  Parties: low
   Agreement Date: low
+  Effective Date: low
+  Expiration Date: low
+  Governing Law: low
+
+# --- Restrictive keywords ----------------------------------------------------
+# Case-insensitive substring matches on the evidence text. Starter lists from
+# the CUAD samples in notebooks/Risk_clause_samples.ipynb; extend as you read.
+keywords:
+  # Contract metadata never scores on keywords: "at any time" in an
+  # expiration date is not a red flag.
+  skip_categories:
+    - Document Name
+    - Parties
+    - Agreement Date
+    - Effective Date
+    - Expiration Date
+    - Governing Law
+  global:
+    - sole discretion
+    - unfettered discretion
+    - at any time
+    - for any reason
+    - without cause
+    - without notice
+    - without liability
+    - irrevocable
+    - perpetual
+    - unlimited
+  by_category:
+    Uncapped Liability:
+      - indemnify
+      - all damages
+    Non-Compete:
+      - worldwide
+      - after the termination
+    Exclusivity:
+      - all requirements
+      - worldwide
+      - exclusive
+    Ip Ownership Assignment:
+      - all right, title and interest
+      - hereby assigns
+    Liquidated Damages:
+      - termination fee
+    Change Of Control:
+      - may terminate
+      - prior written consent
+    Minimum Commitment:
+      - take or pay
+      - not less than
+    Renewal Term:
+      - automatically renew
+
+# --- Protective exceptions ---------------------------------------------------
+# category: the category whose presence in the same contract protects it.
+protective_exceptions:
+  Non-Compete: Competitive Restriction Exception
+  Exclusivity: Competitive Restriction Exception
+  No-Solicit Of Customers: Competitive Restriction Exception
+  Uncapped Liability: Cap On Liability
 
 # --- Triage aggregation ------------------------------------------------------
 # Rolling clause-level risk up to one contract-level score and review rank.
 triage:
-  # TODO: confirm. Weighted count is a starting point, not a decision.
+  # Issue #9: triage_score = n_high * 3 + n_medium * 1
   method: weighted_count
   level_points:
-    high: 5
-    medium: 2
+    high: 3
+    medium: 1
     low: 0
   # Contracts with at least this many High clauses are always surfaced first,
   # regardless of total score.
-  always_review_if_high_count: 1
+  always_review_if_high_count: 2
 
 # --- Categories with known data caveats --------------------------------------
 # Carry these through every report that quotes risk numbers.
 caveats:
   no_test_examples:
     - Price Restrictions      # 0 positives in the 102 official test contracts
-  too_sparse_to_model_reliably:  # under 10% of train contracts
-    - Source Code Escrow
-    - Unlimited/All-You-Can-Eat-License
-    - Price Restrictions
+  outside_model_scope:        # dropped from train by the 10% cutoff (PR #41)
     - Affiliate License-Licensor
     - Most Favored Nation
-    - Third Party Beneficiary
-    - No-Solicit Of Customers
     - Non-Disparagement
+    - Price Restrictions
+    - Source Code Escrow
+    - Third Party Beneficiary
+    - Unlimited/All-You-Can-Eat-License
+  sparse_but_trained:         # kept below the 10% cutoff (PR #41)
+    - No-Solicit Of Customers
     - Joint Ip Ownership
+  weak_detection:             # first transformer run, test F1 < 0.55
+    - Volume Restriction
+    - No-Solicit Of Customers
+    - Joint Ip Ownership
+    - Affiliate License-Licensee
+    - Liquidated Damages
+    - Competitive Restriction Exception
+    - Change Of Control
