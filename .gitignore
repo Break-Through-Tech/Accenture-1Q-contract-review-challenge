@@ -36,3 +36,6 @@ results/*.db-journal
 
 # Confidential contracts - never commit
 contracts/
+*.txt
+!requirements.txt
+
