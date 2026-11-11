@@ -45,6 +45,8 @@ Why labels are True, False, or missing
              has a span that is unplaced or misaligned. Such a span marks nothing, and the
              False labels for that contract/category are masked as <NA>; True labels from
              the same category's good spans are kept.
+
+Correlation identifier where we can link different setenes instead of using overlap chunks. Using LLM
 """
 
 from typing import NamedTuple
