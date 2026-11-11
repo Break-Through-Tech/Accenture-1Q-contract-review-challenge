@@ -18,6 +18,7 @@ Folds split by contract, never by chunk, so no contract's chunks straddle a fold
 
 import argparse
 import json
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -233,6 +234,10 @@ def _main():
     parser.add_argument("--config", default="configs/transformer.yaml")
     parser.add_argument("--folds", type=int, default=5)
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--backup-to", default=None, metavar="DIR",
+                        help="also copy results here when finished, e.g. a mounted "
+                             "Drive folder. Colab wipes its disk after about 90 minutes "
+                             "idle, so an unattended run should set this.")
     parser.add_argument("--tune-only", action="store_true",
                         help="re-tune from saved out-of-fold probabilities (no GPU needed)")
     args = parser.parse_args()
@@ -265,6 +270,15 @@ def _main():
         "note": "Test data was not used to select these thresholds.",
     }, indent=2))
     print(f"\nwrote tuned_thresholds.csv and thresholds.json to {output_dir}")
+
+    if args.backup_to:
+        backup = Path(args.backup_to) / output_dir.name
+        backup.mkdir(parents=True, exist_ok=True)
+        for name in ("oof_predictions.parquet", "tuned_thresholds.csv", "thresholds.json"):
+            source = output_dir / name
+            if source.exists():
+                shutil.copy2(source, backup / name)
+        print(f"backed up to {backup}")
 
 
 if __name__ == "__main__":

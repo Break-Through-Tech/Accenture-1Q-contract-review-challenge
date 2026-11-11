@@ -112,9 +112,9 @@ category_tiers:
   # Contract metadata, no inherent risk
   Document Name: low
   Parties: low
-  Agreement Date: low
-  Effective Date: low
-  Expiration Date: low
+  Agreement Date: high
+  Effective Date: high
+  Expiration Date: high
   Governing Law: low
 
 # --- Restrictive keywords ----------------------------------------------------

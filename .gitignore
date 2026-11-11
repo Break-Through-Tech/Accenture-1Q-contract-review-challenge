@@ -33,3 +33,6 @@ results/*.db-journal
 
 # Local env
 .env
+
+# Confidential contracts - never commit
+contracts/
