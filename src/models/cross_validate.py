@@ -262,22 +262,44 @@ def _main():
     print(f"  macro-F1 at best:  {float(sweep.macro_f1.max()):.4f}")
     print(f"  per-category:      {per_category.oof_f1.mean():.4f}")
 
-    per_category.to_csv(output_dir / "tuned_thresholds.csv", index=False)
-    (output_dir / "thresholds.json").write_text(json.dumps({
+    payload = {
         "global_threshold": global_threshold,
         "per_category": dict(zip(per_category.category, per_category.threshold)),
         "tuned_on": "out-of-fold cross-validation over the official train split",
         "note": "Test data was not used to select these thresholds.",
-    }, indent=2))
-    print(f"\nwrote tuned_thresholds.csv and thresholds.json to {output_dir}")
+    }
+
+    # Print the full result before writing it. A hosted notebook can lose its disk
+    # at any point, and a run whose only record was a file has to be repeated;
+    # a run whose record is the cell output does not.
+    print()
+    print("PER-CATEGORY THRESHOLDS (out-of-fold)")
+    print(per_category.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+    print()
+    print("--- thresholds.json ---")
+    print(json.dumps(payload, indent=2))
+    print("--- end thresholds.json ---")
+
+    per_category.to_csv(output_dir / "tuned_thresholds.csv", index=False)
+    (output_dir / "thresholds.json").write_text(json.dumps(payload, indent=2))
+    print()
+    print(f"wrote tuned_thresholds.csv and thresholds.json to {output_dir}")
 
     if args.backup_to:
-        backup = Path(args.backup_to) / output_dir.name
+        # Confirm the destination really is a mounted volume. An unmounted Drive
+        # path still accepts a mkdir, so the copy appears to work and is lost with
+        # the rest of the disk; checking the mount point is what makes it durable.
+        destination = Path(args.backup_to)
+        if not destination.parent.exists():
+            print(f"WARNING: {destination.parent} does not exist - is Drive mounted? "
+                  f"Copying anyway, but this may not survive the runtime.")
+        backup = destination / output_dir.name
         backup.mkdir(parents=True, exist_ok=True)
         for name in ("oof_predictions.parquet", "tuned_thresholds.csv", "thresholds.json"):
             source = output_dir / name
             if source.exists():
                 shutil.copy2(source, backup / name)
+                print(f"  backed up {name} ({(backup / name).stat().st_size:,} bytes)")
         print(f"backed up to {backup}")
 
 
