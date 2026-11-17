@@ -1,0 +1,35 @@
+category,threshold,oof_f1,oof_f1_at_half,support
+Affiliate License-Licensee,0.19,0.5038,0.2034,47
+Agreement Date,0.1,0.9652,0.955,377
+Anti-Assignment,0.28,0.9638,0.9581,302
+Audit Rights,0.41,0.9333,0.9239,176
+Cap On Liability,0.49,0.933,0.933,231
+Change Of Control,0.16,0.5076,0.2018,95
+Competitive Restriction Exception,0.16,0.4938,0.169,60
+Covenant Not To Sue,0.3,0.75,0.5785,76
+Document Name,0.02,0.9963,0.9762,408
+Effective Date,0.21,0.8867,0.8323,320
+Exclusivity,0.26,0.7349,0.624,147
+Expiration Date,0.25,0.9394,0.921,335
+Governing Law,0.14,0.9915,0.9829,354
+Insurance,0.24,0.9338,0.9091,134
+Ip Ownership Assignment,0.61,0.7732,0.7596,101
+Irrevocable Or Perpetual License,0.38,0.8929,0.8679,57
+Joint Ip Ownership,0.17,0.4516,0.0,39
+License Grant,0.5,0.9314,0.9314,205
+Liquidated Damages,0.15,0.4956,0.2182,47
+Minimum Commitment,0.26,0.7575,0.7252,133
+No-Solicit Of Customers,0.1,0.34,0.0645,27
+No-Solicit Of Employees,0.38,0.76,0.6667,49
+Non-Compete,0.17,0.584,0.478,96
+Non-Transferable License,0.5,0.8319,0.8319,116
+Notice Period To Terminate Renewal,0.65,0.7835,0.7568,95
+Parties,0.02,0.9988,0.9863,407
+Post-Termination Services,0.28,0.6982,0.6513,153
+Renewal Term,0.69,0.8532,0.8375,150
+Revenue/Profit Sharing,0.48,0.7969,0.7969,131
+Rofr/Rofo/Rofn,0.16,0.5644,0.4742,68
+Termination For Convenience,0.19,0.6295,0.543,154
+Uncapped Liability,0.42,0.6883,0.6489,98
+Volume Restriction,0.17,0.439,0.1333,65
+Warranty Duration,0.14,0.766,0.6337,65
