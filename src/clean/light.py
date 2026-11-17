@@ -4,6 +4,8 @@ Run this after answer spans have been mapped to chunks. Known extraction and
 source-metadata artifacts are blanked with spaces rather than deleted, so the
 cleaned string has exactly the same character length as its source. Keep the
 original text for evidence and display; this function only prepares model input.
+
+running -> run
 """
 
 import re
