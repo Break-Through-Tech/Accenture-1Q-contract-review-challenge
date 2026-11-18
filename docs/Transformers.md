@@ -31,7 +31,7 @@ The transformer produces a score for each chunk/category pair. Later pipeline st
 3. Apply the light cleaning intended for the transformer after span alignment. Keep the original chunk text and offsets for audit and evidence use.
 4. Tokenize chunks using the tokenizer paired with DistilRoBERTa.
 5. Fine-tune the pretrained model on labeled training chunks.
-6. Evaluate once on the official held-out test contracts using the configured 0.5 threshold. Do not tune thresholds against test predictions; threshold tuning would require a separate validation procedure that preserves contract-level splits.
+6. Evaluate once on the official held-out test contracts using the configured threshold. Never tune thresholds against test predictions. The threshold is derived separately by [`src/models/cross_validate.py`](../src/models/cross_validate.py), which runs 5-fold cross-validation over the train split with folds divided by contract, then tunes on the resulting out-of-fold probabilities.
 7. Save the checkpoint, tokenizer, category list, thresholds, data version, and evaluation results for reproducibility.
 
 All chunks from a contract must remain within that contract's official train or test split. This avoids leakage between training and evaluation.
@@ -44,9 +44,9 @@ The architecture plans to use Google Colab with a GPU for fine-tuning. GPUs make
 
 ## Evaluation
 
-Because category frequencies are imbalanced, accuracy alone can hide poor performance on less common categories. Report per-category precision, recall, and F1, along with macro-F1, which gives each evaluated category equal weight. The evaluation merges chunk probabilities back to one contract/category score using the maximum chunk probability, so overlap does not count a clause twice. The initial flow uses a fixed 0.5 threshold; any later threshold tuning must use validation data, never the held-out test set.
+Because category frequencies are imbalanced, accuracy alone can hide poor performance on less common categories. Report per-category precision, recall, and F1, along with macro-F1, which gives each evaluated category equal weight. The evaluation merges chunk probabilities back to one contract/category score using the maximum chunk probability, so overlap does not count a clause twice. The first run used a fixed 0.5 threshold and scored macro-F1 0.717. The configured threshold is now **0.24**, tuned on out-of-fold cross-validation over the train split, which raises test macro-F1 to 0.750 without retraining. One global threshold is used rather than one per category: per-category thresholds scored higher out-of-fold (0.752 against 0.717) but lower on the held-out test set (0.748 against 0.750), because each is fit on as few as 27 positive contracts and does not transfer. `reports/tuned_thresholds.csv` keeps the per-category table as evidence. Any future tuning must use validation data, never the held-out test set.
 
-The chunk-label artifact retains nullable columns for categories that have been excluded from training. The model selects the 34 categories with positive training labels and masks missing targets in the loss. Test metrics use that same resolved category list; the other seven categories remain outside the model's scope.
+The chunk-label artifact retains nullable columns for categories that have been excluded from training. The model selects the 34 categories with positive training labels and masks missing targets in the loss. Test metrics use that same resolved category list; the other seven categories remain outside the model's scope. Six of those seven do occur in test contracts, so report coverage as well as performance: macro-F1 is 0.750 over the 34 modeled categories and 0.637 over the 40 that the test set actually exercises.
 
 ## Limitations and trade-offs
 

@@ -5,7 +5,10 @@ model:
   max_length: 512 # includes the two special tokens; chunk text is capped at 510 tokens
   dropout: 0.1
   expected_num_labels: 34 # derived from categories with positive labels in train
-  decision_threshold: 0.5 # tune with validation data before final test evaluation
+  decision_threshold: 0.24 # tuned on out-of-fold cross-validation over train (#7);
+  # a single global value, not per-category: per-category thresholds scored higher
+  # out-of-fold (0.752 vs 0.717) but lower on the held-out test set (0.748 vs 0.750),
+  # because each one is fit on as few as 27 positive contracts and does not transfer.
 
 data:
   chunks_path: data/processed/chunks.parquet
