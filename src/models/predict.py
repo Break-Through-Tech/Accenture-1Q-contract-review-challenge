@@ -60,6 +60,20 @@ def load_model(run_dir, device="auto") -> LoadedModel:
                        float(metadata["threshold"]), device)
 
 
+def score_texts(texts, loaded: LoadedModel, batch_size: int = 8) -> pd.DataFrame:
+    """Probabilities for already-cleaned chunk texts. One row per text, one column
+    per category."""
+    rows = []
+    with torch.inference_mode():
+        for start in range(0, len(texts), batch_size):
+            encoded = loaded.tokenizer(list(texts[start:start + batch_size]), padding=True,
+                                       return_tensors="pt", verbose=False)
+            encoded = {k: v.to(loaded.device) for k, v in encoded.items()}
+            logits = loaded.model(**encoded)["logits"]
+            rows.extend(predict_probabilities(logits).cpu().numpy())
+    return pd.DataFrame(rows, columns=loaded.categories)
+
+
 def predict_chunks(text, loaded: LoadedModel, batch_size: int = 8) -> pd.DataFrame:
     """Score every chunk of `text`. One row per chunk, one column per category."""
     cleaned = clean_transformer_text(text)      # clean first, then chunk, as in training
@@ -67,17 +81,7 @@ def predict_chunks(text, loaded: LoadedModel, batch_size: int = 8) -> pd.DataFra
     if not chunks:
         return pd.DataFrame(columns=["chunk_index", "start_char", "end_char"] + loaded.categories)
 
-    rows = []
-    with torch.inference_mode():
-        for start in range(0, len(chunks), batch_size):
-            batch = chunks[start:start + batch_size]
-            encoded = loaded.tokenizer([c["text"] for c in batch], padding=True,
-                                       return_tensors="pt", verbose=False)
-            encoded = {k: v.to(loaded.device) for k, v in encoded.items()}
-            logits = loaded.model(**encoded)["logits"]
-            rows.append(predict_probabilities(logits).cpu().numpy())
-
-    probabilities = pd.DataFrame(sum((list(r) for r in rows), []), columns=loaded.categories)
+    probabilities = score_texts([c["text"] for c in chunks], loaded, batch_size)
     meta = pd.DataFrame([{"chunk_index": c["chunk_index"],
                           "start_char": c["start_char"],
                           "end_char": c["end_char"]} for c in chunks])

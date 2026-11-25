@@ -101,6 +101,8 @@ flowchart TB
 
 The Results DB is the single source of truth for everything downstream of the classifier. Chunk labels for training live in the Parquet file. The DB holds what the system *produces*.
 
+**Status: implemented (#46)** in `src/db/schema.py`, written by `src/pipeline.py`. How to run it and query it: [PIPELINE.md](PIPELINE.md).
+
 ```mermaid
 erDiagram
     CONTRACT ||--o{ CHUNK : "split into"
@@ -110,20 +112,24 @@ erDiagram
     CONTRACT ||--o{ CLAUSE_REGISTER : "contains"
     CHUNK ||--o{ CLAUSE_REGISTER : "evidence for"
     CLAUSE_REGISTER ||--o| ADVISOR_LABEL : "validated by"
-    CONTRACT ||--|| TRIAGE_SCORE : "ranked by"
+    CONTRACT ||--o{ TRIAGE_SCORE : "ranked by"
 
     CONTRACT {
         string contract_id PK
         string title
-        string split "train or test"
+        string split "train, test or external"
         int n_chars
+        string source "file path or cuad:split:index"
     }
     CHUNK {
         string chunk_id PK
         string contract_id FK
+        int chunk_index
         int start_char
         int end_char
-        string text_light
+        int n_tokens
+        string text "raw slice, shown as evidence"
+        string text_light "cleaned slice, what the model reads"
     }
     MODEL_RUN {
         string run_id PK
@@ -131,6 +137,8 @@ erDiagram
         string artifact_uri
         string git_commit
         string created_at
+        float threshold
+        string metadata_json "run_metadata.json"
     }
     PREDICTION {
         string chunk_id FK
@@ -156,8 +164,10 @@ erDiagram
         string signal_scores "JSON, one entry per signal"
         float risk_score
         string risk_level "Low, Medium, High"
-        string rules_version
-        string run_id FK
+        string rules_version PK
+        string run_id PK
+        int start_char "evidence offsets in the contract"
+        int end_char
     }
     ADVISOR_LABEL {
         string clause_id FK
@@ -166,15 +176,25 @@ erDiagram
     }
     TRIAGE_SCORE {
         string contract_id PK
+        string run_id PK
+        string rules_version PK
         float triage_score
-        int review_rank
+        int review_rank "within the contract's split"
         int n_high
         int n_medium
-        string rules_version
     }
 ```
 
 **Why `run_id` and `rules_version` appear everywhere:** they are what make a risk score auditable. Any row in the clause register can answer "which model flagged this, and which version of the rules scored it?"
+
+What the implementation (#46) added to the original design, and why:
+
+* **`run_id` and `rules_version` are part of the key** of `CLAUSE_REGISTER` and `TRIAGE_SCORE`. Re-scoring with a new rules version, or a new checkpoint, adds rows instead of overwriting the old scores, so versions can be compared.
+* **`run_id` is derived from the checkpoint files**: run folder name plus a hash of `run_metadata.json` and `classifier.pt` (`src/db/runs.py`). The trainer does not record a run id, commit or timestamp. Hashing gives the same id on every machine, and a new id for every retrain. `git_commit` is the commit of the code that ran the pipeline.
+* **`CLAUSE_REGISTER` keeps the evidence offsets** (`start_char`, `end_char`), which index the original contract text, so a reviewer can find the source wording.
+* **`CHUNK` keeps the raw text as well as the cleaned text.** The light cleaner never changes length, so one set of offsets indexes both. Evidence is shown in the original wording.
+* **`MODEL_RUN` records the threshold**, since `PREDICTION.predicted` depends on it.
+* **`review_rank` is computed within a split** (test, train, external), so a train contract the model has already seen never outranks unseen test contracts.
 
 ---
 
@@ -182,15 +202,19 @@ erDiagram
 
 | Component | Layer | Input | Output | Status |
 |---|---|---|---|---|
-| Loader | Preprocessing | Raw CUAD JSON | Contract text + answer spans | Frozen (official split, no PDF parsing) |
+| Loader | Preprocessing | Raw CUAD JSON or a `.txt` file | Contract text + answer spans | Frozen (official split, no PDF parsing yet: #53) |
 | Chunker | Preprocessing | Contract text | Chunks with character offsets | Frozen (510 tokens, 128 overlap; decided in #22, built in #23) |
 | Span-to-label mapper | Preprocessing | Chunks + `answer_start` spans | 41 nullable labels per chunk | Frozen; 7 train-excluded categories remain missing in train labels |
 | Light cleaner | Preprocessing | Labeled chunks | Cleaned text column | Frozen (applied after mapping) |
 | DistilRoBERTa trainer | Modeling | Light-cleaned text + 34 train-supported labels | Fine-tuned checkpoint | Frozen model choice and category scope; imbalance strategy TBD |
-| Inference | Modeling | Chunks + checkpoint | 34 probabilities per chunk | Proposed |
-| Evidence extractor | Risk engine | Predictions | Supporting clause text per category | Proposed |
-| Rule-based scorer | Risk engine | Evidence + `risk_rules.yaml` | Risk level per clause | Proposed (four signals TBD) |
-| Triage aggregator | Risk engine | Clause risk levels | Contract triage score + rank | Proposed |
+| Inference | Modeling | Chunks + checkpoint | 34 probabilities per chunk | Built (`src/models/predict.py`, #43) |
+| Evidence extractor | Risk engine | Predictions | Supporting clause text per category | Built (`src/risk/evidence.py`, #9) |
+| Rule-based scorer | Risk engine | Evidence + `risk_rules.yaml` | Risk level per clause | Built (`src/risk/scorer.py`, #9); rules version still draft |
+| Triage aggregator | Risk engine | Clause risk levels | Contract triage score + rank | Built (`src/risk/triage.py`, #9); ranked within each split |
+| Results DB | Storage | Stage outputs | SQLite tables of §3 | Built (`src/db/`, #46) |
+| Pipeline | Orchestration | Contract files or CUAD contracts | DB rows, stage by stage | Built (`src/pipeline.py`, #46) |
+| Report generator | Presentation | Results DB | TXT + JSON report per contract, with review flags | Built (`src/report.py`); page/line numbers pending #54/#55, LLM overview pending #56 |
+| Amount normalizer | Presentation | Evidence text | Money amounts as one value (`$1M` = `$1,000,000`) | Built (`src/risk/amounts.py`); listed in reports, not used in scoring |
 | Classifier evaluation | Evaluation | Predictions + gold labels | Per-category metrics | Frozen metric (macro-F1) |
 | Risk validation | Evaluation | Clause register + advisor CSV | Spearman, bucket agreement | Proposed |
 | Sensitivity analysis | Evaluation | Rules config + DB | Boundary stability report | Proposed |
@@ -205,7 +229,7 @@ erDiagram
 | Processed store | Parquet | One row per chunk: ids, offsets, original/light-cleaned text, 41 nullable source label columns | Keeps source annotations intact; the model selects 34 categories with positive training examples | Proposed |
 | Model registry | Shared Google Drive folder (or Hugging Face Hub) | DistilRoBERTa checkpoints | Colab disks reset every session; checkpoints are too large for git | Proposed |
 | Risk rules config | YAML in git | Signal weights, thresholds, category risk tiers | Rules are reviewable in pull requests, and every change gets a version | Proposed |
-| Results DB | SQLite file | Clause register, triage scores, predictions, metrics, advisor labels | Single file, no server, queryable with SQL, easy to hand to the advisor | Proposed |
+| Results DB | SQLite file | Clause register, triage scores, predictions, metrics, advisor labels | Single file, no server, queryable with SQL, easy to hand to the advisor | Built (#46) |
 
 **Trade-off note.** SQLite is the right size for 510 contracts. It would need to become Postgres only if the system served many concurrent users, which is outside this project's scope.
 
@@ -244,10 +268,7 @@ erDiagram
 
 ## 8. Repo layout
 
-**Status: implemented.** The directory tree below exists in the repo. Package
-directories under `src/` currently hold only `__init__.py` docstrings describing
-what belongs in each — the modules themselves are written as their milestones
-come up.
+**Status: implemented.** The directory tree below exists in the repo.
 
 ```
 Accenture-1Q-contract-review-challenge/
@@ -260,20 +281,28 @@ Accenture-1Q-contract-review-challenge/
 │   ├── ingest/               # loader, chunker, span-to-label mapper
 │   ├── clean/                # light cleaner
 │   ├── models/               # DistilRoBERTa train / infer
-│   ├── risk/                 # evidence extractor, scorer, triage
-│   ├── db/                   # SQLite schema + read/write helpers
-│   └── eval/                 # metrics, Spearman, sensitivity
+│   ├── risk/                 # evidence extractor, scorer, triage, amount normalizer
+│   ├── db/                   # SQLite schema, read/write helpers, run ids
+│   ├── eval/                 # metrics, Spearman, sensitivity
+│   ├── pipeline.py           # ingest -> infer -> score, into the results DB
+│   ├── report.py             # TXT / JSON review report per contract
+│   └── demo.py               # one contract, printed to the terminal, no DB
 ├── notebooks/                # EDA, error analysis
+├── models/                   # trained run folders from Drive (gitignored)
 ├── results/
-│   └── cuad_results.db       # results DB (gitignored)
+│   ├── cuad_results.db       # results DB (gitignored)
+│   └── reports/              # generated contract reports (gitignored: quote contract text)
 ├── app/                      # Streamlit / Gradio demo (stretch)
 ├── reports/                  # final report, figures
+├── tests/                    # pytest; no checkpoint or GPU needed
 └── docs/
-    └── ARCHITECTURE.md       # this file
+    ├── ARCHITECTURE.md       # this file
+    └── PIPELINE.md           # how to run the pipeline and reports
 ```
 
-What `.gitignore` keeps out: `data/processed/*.parquet`, `results/*.db`, model
-checkpoints (`*.pt`, `*.bin`, `*.safetensors`, `*.pkl`), `__pycache__/`, and
+What `.gitignore` keeps out: `data/processed/*.parquet`, `results/*.db`,
+`results/reports/`, `/models/` and model checkpoints (`*.pt`, `*.bin`,
+`*.safetensors`, `*.pkl`), confidential `contracts/`, `__pycache__/`, and
 `.ipynb_checkpoints/`. Everything ignored is regenerable from `data/cuad/` plus
 committed code and configs.
 

@@ -29,13 +29,25 @@
 
 ## 👩🏽‍💻 **Setup and Installation**
 
-**Provide step-by-step instructions so someone else can run your code and reproduce your results. Depending on your setup, include:**
+```powershell
+git clone https://github.com/Break-Through-Tech/Accenture-1Q-contract-review-challenge.git
+cd Accenture-1Q-contract-review-challenge
+python -m venv .venv
+.venv\Scripts\activate                     # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-* How to clone the repository
-* How to install dependencies
-* How to set up the environment
-* How to access the dataset(s)
-* How to run the notebook or scripts
+The CUAD dataset is committed in `data/cuad/`. Put a trained model run from the
+shared Drive at `models/distilroberta-cuad/`, then run a contract end to end:
+
+```powershell
+python -m src.pipeline run --cuad test:0 --report     # a CUAD test contract
+python -m src.pipeline run --file my_contract.txt --report
+```
+
+Results go to `results/cuad_results.db`, and the review reports go to
+`results/reports/`. See **[docs/PIPELINE.md](docs/PIPELINE.md)** for each stage,
+the DB tables, the report contents, Colab, and tests (`python -m pytest`).
 
 ---
 
