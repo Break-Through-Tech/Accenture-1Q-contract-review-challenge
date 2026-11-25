@@ -22,6 +22,9 @@ results/*.db
 results/*.db-journal
 !results/.gitkeep
 
+# Generated contract reports quote contract text - never commit
+results/reports/
+
 # Model checkpoints live in shared Drive / HF Hub, not git
 *.pt
 *.bin

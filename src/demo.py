@@ -17,75 +17,18 @@ with its character offsets, so a reviewer can go read the source wording.
 
 import argparse
 import json
-import re
 import textwrap
 from pathlib import Path
 
 import pandas as pd
 
 from src.models.predict import load_model, predict_chunks
+from src.risk.evidence import best_excerpt
 from src.risk.scorer import load_rules, score_clauses
 from src.risk.triage import triage_contracts
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_RUN = ROOT / "models" / "distilroberta-cuad"
-
-
-# Words that appear in category names but carry no signal when matching text.
-_STOPWORDS = {"of", "on", "to", "or", "and", "the", "a", "for", "in", "not"}
-
-
-def _category_terms(category, rules):
-    """Terms that suggest a chunk's text is actually about this category.
-
-    The category's own name, plus the restrictive keywords the risk rules already
-    define for it. Both are matched case-insensitively.
-    """
-    words = [w.strip("/-") for w in category.replace("-", " ").replace("/", " ").split()]
-    terms = {w.lower() for w in words if len(w) > 2 and w.lower() not in _STOPWORDS}
-    terms |= {k.lower() for k in rules.get("keywords", {})
-              .get("by_category", {}).get(category, [])}
-    return terms
-
-
-def best_excerpt(text, category, rules, width=240):
-    """The part of `text` most likely to be the clause itself.
-
-    A chunk is ~2000 characters, and the clause can sit anywhere inside it, so
-    printing the first N characters usually shows the wrong paragraph. This scores
-    each sentence by how many of the category's terms it contains and returns the
-    best one with a little surrounding context.
-    """
-    flat = " ".join(str(text or "").split())
-    if not flat:
-        return ""
-
-    sentences = [s for s in re.split(r"(?<=[.;:])\s+", flat) if s.strip()]
-    if not sentences:
-        return flat[:width]
-
-    terms = _category_terms(category, rules)
-    scores = [sum(1 for t in terms if t in s.lower()) for s in sentences]
-    if max(scores, default=0) == 0:
-        return flat[:width] + ("..." if len(flat) > width else "")
-
-    # Grow outwards from the best sentence until the excerpt fills `width`.
-    best = int(max(range(len(sentences)), key=lambda i: scores[i]))
-    start = end = best
-    excerpt = sentences[best]
-    # Grow forward first: a clause heading is followed by its terms, not preceded.
-    while len(excerpt) < width and (start > 0 or end < len(sentences) - 1):
-        if end < len(sentences) - 1:
-            end += 1
-        elif start > 0:
-            start -= 1
-        else:
-            break
-        excerpt = " ".join(sentences[start:end + 1])
-
-    prefix = "..." if start > 0 else ""
-    suffix = "..." if end < len(sentences) - 1 else ""
-    return f"{prefix}{excerpt[:width + 60]}{suffix}"
 
 
 def analyse(text, contract_id, run_dir=DEFAULT_RUN, threshold=None, rules_path=None,
